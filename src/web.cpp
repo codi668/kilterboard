@@ -420,11 +420,28 @@ void webBegin() {
       }
     });
 
+  server.on("/api/captive", HTTP_GET, [] {
+    if (server.hasArg("on")) {
+      setCaptive(server.arg("on") == "1" || server.arg("on") == "true");
+      settingsSave();
+    }
+    server.send(200, "application/json",
+      String("{\"captive\":") + (st.captive ? "true" : "false") + "}");
+  });
+
   server.onNotFound([] {
-    // Handys pruefen nach dem Verbinden eine Testadresse; wir schicken sie
-    // auf die Startseite, damit die Oberflaeche von selbst aufgeht.
-    server.sendHeader("Location", "/", true);
-    server.send(302, "text/plain", "");
+    // Handys rufen nach dem Verbinden eine Testadresse ab. Antwortet man
+    // darauf mit einer Umleitung, oeffnet das Geraet die Seite von selbst
+    // in einem Fenster. Das passiert nur, wenn das Captive-Portal
+    // eingeschaltet ist -- sonst gibt es hier eine schlichte Absage.
+    if (st.captive) {
+      server.sendHeader("Location", "/", true);
+      server.send(302, "text/plain", "");
+    } else {
+      server.send(404, "text/plain",
+                  "Nicht gefunden. Die Steuerung liegt unter http://" +
+                  WiFi.softAPIP().toString() + "/");
+    }
   });
 
   server.begin();

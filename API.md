@@ -171,6 +171,7 @@ GET /api/touch/calib      # neu einmessen, dabei die Griffe nicht anfassen
 ## Nebenbei nützlich
 
 ```
+GET /api/captive?on=0|1   Seite beim Verbinden automatisch öffnen (Standard: aus)
 GET /api/status           alles auf einmal (das, was die Weboberfläche nutzt)
 GET /api/mode?m=<1..6>    1 Regenbogen, 2 Griffe, 3 Spiel, 4 Aus,
                           5 Testbild, 6 Fernsteuerung

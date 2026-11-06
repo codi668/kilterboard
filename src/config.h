@@ -48,6 +48,7 @@ struct State {
   uint8_t  brightness  = 160;
   uint8_t  speed       = 50;        // 0..100, Tempo der Animation
   uint8_t  ledOrder    = 0;         // Index in ledOrderNames (0 = RGB)
+  bool     captive     = false;     // Seite beim Verbinden von selbst oeffnen
   uint8_t  gripState[NUM_GRIPS] = {0};   // Farbindex je Griff in MODE_TOUCH
   // Spiel
   GameState gameState  = GAME_IDLE;
@@ -123,6 +124,7 @@ void webTick();
 // ---- main.cpp ----------------------------------------------------------
 void settingsSave();              // Helligkeit, Tempo, Bestzeit, Route
 String netInfo();                 // JSON-Fragment zum Netzwerkstatus
+void setCaptive(bool an);         // Captive-Portal ein- oder ausschalten
 
 // Fortschritts-/Statusbalken auf der Hauptmatrix (Boot, OTA)
 void boardShowProgress(uint8_t prozent, uint32_t color);

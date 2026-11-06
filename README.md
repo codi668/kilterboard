@@ -88,9 +88,15 @@ Beim Start versucht die Wand das in `src/secrets.h` eingetragene WLAN. Klappt
 das nicht (oder steht dort `-`), spannt sie ihr eigenes auf:
 
 - WLAN **Kletterwand**, Passwort `kletterwand`
-- Adresse **http://192.168.4.1** — ein Captive-DNS leitet alle Anfragen
-  dorthin, auf den meisten Handys geht die Seite von selbst auf
-- im Heimnetz zusätzlich **http://kilterboard.local**
+- Adresse **http://192.168.4.1**, im Heimnetz auch
+  **http://kilterboard.local**
+
+Nach dem Verbinden geht **nichts von selbst auf** — die Adresse wird im
+Browser eingetippt. Wer es anders will, schaltet unter **Info → Verbinden**
+„Seite automatisch öffnen“ ein: Dann beantwortet ein eigener DNS-Server
+jede Namensanfrage mit der Adresse der Wand, das Handy hält das Netz für
+eines mit Anmeldeseite und öffnet die Steuerung von selbst in einem
+Fenster. Die Einstellung bleibt über den Neustart erhalten.
 
 Bricht ein verbundenes WLAN weg, schaltet die Wand nach spätestens zehn
 Sekunden selbst auf den eigenen Access Point um.

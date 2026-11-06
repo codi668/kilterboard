@@ -262,6 +262,16 @@ summary{cursor:pointer;color:var(--dim);font-size:.85rem;padding:8px 0}
     </details>
   </div>
   <div class="card">
+    <h2>Verbinden</h2>
+    <p class="note">Wenn die Seite beim Verbinden mit dem WLAN von selbst
+      in einem Fenster aufgehen soll, lässt sich das hier einschalten.
+      Standardmäßig ist es aus &ndash; die Steuerung erreicht man dann
+      über die Adresse oben.</p>
+    <div class="row" style="margin-top:10px">
+      <button class="small" id="captive">Seite automatisch öffnen</button>
+    </div>
+  </div>
+  <div class="card">
     <h2>Ansicht</h2>
     <div class="row"><button class="small" id="flip">Wandansicht drehen</button></div>
     <p class="note" style="margin-top:8px">Falls die Anzeige auf dem Kopf
@@ -386,6 +396,9 @@ function paint(s){
     });
   }
   [...or_.children].forEach((b,i)=>b.classList.toggle('on',i===s.ledOrder));
+  const cap=document.getElementById('captive');
+  cap.classList.toggle('on', !!s.net.captive);
+  cap.textContent='Seite automatisch öffnen: '+(s.net.captive?'an':'aus');
   document.getElementById('iVer').textContent=s.ver;
   document.getElementById('iUp').textContent=fmtUp(s.up);
   document.getElementById('iHeap').textContent=(s.heap/1024).toFixed(0)+' kB';
@@ -489,6 +502,8 @@ document.getElementById('gStop').onclick=()=>go('/api/game/stop');
 document.getElementById('gReset').onclick=()=>{
   if(confirm('Bestenliste wirklich löschen?')) go('/api/game/top/clear');};
 document.getElementById('calib').onclick=()=>go('/api/touch/calib');
+document.getElementById('captive').onclick=()=>
+  go('/api/captive?on='+(state&&state.net.captive?'0':'1'));
 document.getElementById('srcToggle').onclick=()=>
   go('/api/touch?src='+(state&&state.touch.useDelta?'status':'delta'));
 document.getElementById('reboot').onclick=()=>{

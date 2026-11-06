@@ -57,7 +57,7 @@ Nebenläufigkeit — der einzige `delay()` steht im Startvorgang.
 void loop() {
   ArduinoOTA.handle();
   webTick();                              // HTTP-Anfragen abarbeiten
-  if (apMode) dns.processNextRequest();   // Captive-Portal
+  if (apMode && st.captive) dns.processNextRequest();  // Captive-Portal
   touchTick();                            // alle 20 ms
   boardTick();                            // alle 20–30 ms ein Bild
   if (dirty && millis() - dirtyAt > 3000) settingsFlush();
@@ -271,10 +271,18 @@ mit 5, 10 und 20 Griffen in derselben Bestenliste vergleichbar sind.
 Beim Start versucht die Wand das in `src/secrets.h` hinterlegte WLAN. Der
 Verbindungsversuch läuft im Hintergrund, während der Countdown 3-2-1
 angezeigt wird; erst danach wird bis zu acht Sekunden gewartet. Klappt es
-nicht, spannt sie ihr eigenes WLAN auf und startet einen DNS-Server, der
-alle Namen auf die eigene Adresse beantwortet — zusammen mit einer
-Umleitung auf `/` sorgt das dafür, dass sich die Seite auf den meisten
-Handys von selbst öffnet.
+nicht, spannt sie ihr eigenes WLAN auf.
+
+Ein **Captive-Portal ist eingebaut, aber ausgeschaltet** (`st.captive`, im
+NVS unter `captive`). Eingeschaltet beantwortet ein eigener DNS-Server
+jede Namensanfrage mit der eigenen Adresse, und `onNotFound` schickt eine
+Umleitung auf `/`; das Handy hält das Netz dann für eines mit
+Anmeldeseite und öffnet die Steuerung von selbst in einem Fenster. Weil
+dieses Fenster bei jedem Verbinden aufgeht und dabei stört, ist der
+Standard „aus“: Der DNS-Server wird dann gar nicht erst gestartet, und
+unbekannte Pfade bekommen ein schlichtes 404 mit dem Hinweis auf die
+richtige Adresse. Umschalten über `/api/captive?on=1` oder
+Info → Verbinden.
 
 Bricht ein verbundenes WLAN später weg, prüft `loop()` das alle zehn
 Sekunden und schaltet auf den eigenen Zugang um, damit die Oberfläche

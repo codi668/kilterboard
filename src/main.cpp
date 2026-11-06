@@ -31,6 +31,7 @@ static void settingsLoad() {
   st.brightness  = prefs.getUChar("bright", 160);
   st.speed       = prefs.getUChar("speed", 50);
   st.ledOrder    = prefs.getUChar("order", 0);
+  st.captive     = prefs.getBool("captive", false);
 
   // Bis Version 1.0.0 stand hier GRB (aus dem urspruenglichen Sketch).
   // An der Wand zeigte sich: Rot und Gruen sind damit vertauscht, der
@@ -59,6 +60,7 @@ static void settingsFlush() {
   prefs.putUChar("bright", st.brightness);
   prefs.putUChar("speed", st.speed);
   prefs.putUChar("order", st.ledOrder);
+  prefs.putBool("captive", st.captive);
   prefs.putULong("best", st.gameBestMs);
   prefs.putUChar("gtotal", st.gameTotal);
   prefs.putUChar("thr", tc.threshold);
@@ -78,6 +80,7 @@ String netInfo() {
   j += "\",\"host\":\"" HOSTNAME ".local\"";
   j += ",\"rssi\":" + String(apMode ? 0 : WiFi.RSSI());
   j += ",\"clients\":" + String(apMode ? WiFi.softAPgetStationNum() : 0);
+  j += ",\"captive\":" + String(st.captive ? "true" : "false");
   j += "}";
   return j;
 }
@@ -87,16 +90,28 @@ static bool wifiConfigured() {
   return strlen(s) > 0 && strcmp(s, "-") != 0;
 }
 
+// Captive-Portal: Ein eigener DNS-Server beantwortet jede Namensanfrage
+// mit der eigenen Adresse. Das Handy merkt daran, dass es in einem Netz
+// mit Anmeldeseite haengt, und oeffnet die Seite von selbst in einem
+// Fenster. Praktisch, aber aufdringlich -- deshalb standardmaessig aus.
+void setCaptive(bool an) {
+  st.captive = an;
+  dns.stop();
+  if (an && apMode) {
+    dns.setErrorReplyCode(DNSReplyCode::NoError);
+    dns.start(53, "*", WiFi.softAPIP());
+    Serial.println("[wifi] Captive-Portal an");
+  } else {
+    Serial.println("[wifi] Captive-Portal aus");
+  }
+}
+
 static void startAccessPoint() {
   apMode = true;
   WiFi.mode(WIFI_AP);
   WiFi.softAP(AP_SSID, AP_PASSWORD);
   delay(100);
-  // Alle Namensanfragen auf die eigene Adresse umlenken, damit sich die
-  // Seite auf dem Handy von selbst oeffnet.
-  dns.stop();     // falls der Access Point schon einmal lief
-  dns.setErrorReplyCode(DNSReplyCode::NoError);
-  dns.start(53, "*", WiFi.softAPIP());
+  setCaptive(st.captive);
   Serial.printf("[wifi] Access Point \"%s\" -> http://%s\n",
                 AP_SSID, WiFi.softAPIP().toString().c_str());
 }
@@ -177,7 +192,7 @@ void setup() {
 void loop() {
   ArduinoOTA.handle();
   webTick();
-  if (apMode) dns.processNextRequest();
+  if (apMode && st.captive) dns.processNextRequest();
   touchTick();
   boardTick();
 

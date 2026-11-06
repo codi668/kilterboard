@@ -216,7 +216,7 @@ Adresse eine Funktion hinterlegt:
 ```cpp
 server.on("/api/mode", HTTP_GET, [] {
   int m = argInt("m", 1);
-  if (m >= MODE_RAINBOW && m <= MODE_TEST) boardSetMode((Mode)m);
+  if (m >= MODE_RAINBOW && m <= MODE_API) boardSetMode((Mode)m);
   sendOk();
 });
 ```
