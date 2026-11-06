@@ -183,6 +183,7 @@ void setup() {
 
   startOta();
   webBegin();
+  serialBegin();
 
   delay(600);
   boardSetMode(MODE_RAINBOW);
@@ -192,6 +193,7 @@ void setup() {
 void loop() {
   ArduinoOTA.handle();
   webTick();
+  serialTick();
   if (apMode && st.captive) dns.processNextRequest();
   touchTick();
   boardTick();

@@ -284,9 +284,10 @@ void boardOnGripTouched(uint8_t grip) {
     return;
   }
 
-  // In allen anderen Betriebsarten gibt der Griff nur eine kurze
-  // Rueckmeldung, damit man merkt, dass der Sensor arbeitet.
-  flashGrip(grip, 0xFFFFFF, 120);
+  // In allen anderen Betriebsarten passiert an den LEDs nichts. Die
+  // Beruehrung wird nur gemeldet (seriell als Ereignis, ueber WLAN im
+  // Zaehler "touches"); was leuchtet, bestimmt allein die Betriebsart
+  // oder ein Befehl ueber die Schnittstelle.
 }
 
 // ------------------------------------------------------------- Animation

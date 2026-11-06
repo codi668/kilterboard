@@ -117,6 +117,35 @@ void touchTick();                 // alle ~20 ms
 void touchCalibrate();
 void touchSetSensitivity(uint8_t s);
 
+// ---- api.cpp -----------------------------------------------------------
+// Damit die Schnittstelle ueber WLAN und ueber USB dieselbe Logik
+// benutzen, holt sich apiDispatch() seine Parameter ueber diese kleine
+// Abstraktion -- einmal aus dem Webserver, einmal aus einer Befehlszeile.
+struct ApiArgs {
+  virtual bool   has(const char *name) const = 0;
+  virtual String get(const char *name) const = 0;
+  int getInt(const char *name, int fallback) const {
+    return has(name) ? get(name).toInt() : fallback;
+  }
+  virtual ~ApiArgs() {}
+};
+
+// Fuehrt einen Aufruf aus und liefert die JSON-Antwort. code wird auf
+// 200 oder 400 gesetzt. Der Pfad ist der gleiche wie bei HTTP,
+// z. B. "/api/leds/set".
+String apiDispatch(const String &pfad, const ApiArgs &args, int &code);
+String apiStatusJson();
+String apiLedsJson();
+String apiSensorsJson();
+void   apiScoresLoad();
+
+// ---- serial.cpp --------------------------------------------------------
+void serialBegin();
+void serialTick();
+extern bool logEnabled;      // Meldungen wie "[touch] Griff 1 beruehrt"
+extern bool eventsEnabled;   // Beruehrungen von selbst ueber USB melden
+void serialEvent(const char *art, int nummer);
+
 // ---- web.cpp -----------------------------------------------------------
 void webBegin();
 void webTick();

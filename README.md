@@ -19,8 +19,9 @@ Zwei Texte zum Code:
   wie und warum das Ganze funktioniert, und selbst daran weiterbauen.
 - **[DOKUMENTATION.md](DOKUMENTATION.md)** — die knappe Referenz zum
   Nachschlagen: Module, Datenfluss, Speicherbelegung, Schnittstelle.
-- **[API.md](API.md)** — die Schnittstelle über WLAN für eigene Programme:
-  abfragen was leuchtet, Griffe schalten, Sensoren auslesen.
+- **[API.md](API.md)** — die Schnittstelle für eigene Programme, über
+  WLAN und über USB: abfragen was leuchtet, Griffe schalten, Sensoren
+  auslesen. Über USB meldet die Wand Berührungen von selbst.
 
 ## Hardware
 
@@ -148,7 +149,9 @@ fehl, läuft die alte Fassung weiter.
 | `src/config.h` | Konstanten, Betriebsarten, gemeinsamer Zustand |
 | `src/board.cpp` | LED-Mapping, Animationen, Spiellogik |
 | `src/touch.cpp` | CAP1298-Treiber, Flankenerkennung |
-| `src/web.cpp` | Webserver, API, Browser-Update |
+| `src/api.cpp` | die Schnittstelle: eine Stelle für alle Befehle |
+| `src/serial.cpp` | dieselbe Schnittstelle über USB |
+| `src/web.cpp` | Webserver, Seite ausliefern, Browser-Update |
 | `src/web_page.h` | die Weboberfläche (HTML/CSS/JS im Flash) |
 | `src/main.cpp` | Start, WLAN, OTA, Hauptschleife |
 

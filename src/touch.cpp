@@ -160,18 +160,23 @@ void touchTick() {
 
       if (i == 0) {                       // T1 -> Regenbogen
         boardSetMode(MODE_RAINBOW);
-        Serial.println("[touch] T1: Regenbogen");
+        if (logEnabled) Serial.println("[touch] T1: Regenbogen");
+        serialEvent("button", 1);
       } else if (i == 1) {                // T2 -> Griffe / Spiel
         Mode next = (st.mode == MODE_TOUCH) ? MODE_GAME : MODE_TOUCH;
         boardSetMode(next);
-        Serial.printf("[touch] T2: Betriebsart %d\n", (int)next);
+        if (logEnabled) Serial.printf("[touch] T2: Betriebsart %d\n", (int)next);
+        serialEvent("button", 2);
       } else {                            // CS3..CS8 -> Griffe 1..6
         uint8_t grip = i - 2;
-        Serial.printf("[touch] Griff %d beruehrt (Delta %d)\n", grip + 1, tc.delta[i]);
+        if (logEnabled)
+          Serial.printf("[touch] Griff %d beruehrt (Delta %d)\n", grip + 1, tc.delta[i]);
+        serialEvent("touch", grip + 1);
         boardOnGripTouched(grip);
       }
     } else if (!raw && tc.down[i]) {
       tc.down[i] = false;
+      if (i >= 2) serialEvent("release", i - 1);
     }
   }
 }

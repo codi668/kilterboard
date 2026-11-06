@@ -26,8 +26,12 @@ Firmware-Updates über WLAN an.
 
 ```
                     ┌──────────────────────────────────┐
-   Browser  ───────▶│  web.cpp      Webserver + API    │
+   Browser  ───────▶│  web.cpp      Webserver          │
    (Handy)  ◀────── │  web_page.h   Oberfläche im Flash│
+                    ├──────────────────────────────────┤
+   USB      ───────▶│  serial.cpp   Befehlszeilen      │
+   (Rechner)◀────── ├──────────────────────────────────┤
+                    │  api.cpp      ein Weg für beide  │
                     └───────────┬──────────────────────┘
                                 │ ändert Zustand
                                 ▼
@@ -57,6 +61,7 @@ Nebenläufigkeit — der einzige `delay()` steht im Startvorgang.
 void loop() {
   ArduinoOTA.handle();
   webTick();                              // HTTP-Anfragen abarbeiten
+  serialTick();                           // Befehle über USB
   if (apMode && st.captive) dns.processNextRequest();  // Captive-Portal
   touchTick();                            // alle 20 ms
   boardTick();                            // alle 20–30 ms ein Bild
@@ -132,13 +137,35 @@ Liest den CAP1298 alle 20 ms, erkennt Flanken und meldet sie weiter:
 Kanal 1 und 2 sind die Taster T1/T2 und schalten die Betriebsart, Kanal
 3…8 sind die Griffe und gehen an `boardOnGripTouched()`. Details unten.
 
+### `api.cpp`
+
+Die Schnittstelle: eine Stelle, an der jeder Befehl verarbeitet wird,
+egal ob er über WLAN oder über USB kommt. `apiDispatch()` bekommt den
+Pfad (`/api/leds/set`) und die Parameter und liefert die JSON-Antwort
+samt Statuscode zurück. Die Parameter kommen über die kleine
+Abstraktion `ApiArgs`, die es zweimal gibt: einmal für den Webserver
+(`HttpArgs` in `web.cpp`), einmal für eine Befehlszeile (`LineArgs` in
+`serial.cpp`). Dadurch können die beiden Wege nicht auseinanderlaufen —
+eine neue Funktion steht automatisch über beide zur Verfügung.
+
+Hier liegen auch die JSON-Antworten und die Bestenliste. Das JSON wird
+von Hand zusammengebaut statt mit einer Bibliothek — die Antworten haben
+eine feste Form, eine Abhängigkeit lohnt dafür nicht.
+
+### `serial.cpp`
+
+Dieselbe Schnittstelle über das USB-Kabel: Zeilen einlesen, in Pfad und
+Parameter zerlegen, `apiDispatch()` aufrufen, Antwort ausgeben. Versteht
+zwei Schreibweisen (`set grip 3 00FF00` und
+`/api/leds/set?grip=3&color=00FF00`). Zusätzlich meldet sie Berührungen
+von selbst (`serialEvent()`), sodass ein angeschlossener Rechner nicht
+abfragen muss.
+
 ### `web.cpp`
 
-Der Webserver (`WebServer`, synchron) mit allen Endpunkten, der
-JSON-Statusantwort, der Bestenliste und dem Firmware-Upload. Die
-Statusantwort wird von Hand zusammengebaut statt mit einer JSON-Bibliothek
-— sie ist rund 1,5 kB groß und hat eine feste Form, eine Abhängigkeit
-lohnt dafür nicht.
+Nur noch das, was es ausschließlich über HTTP gibt: die Seite ausliefern,
+das Firmware-Update über den Browser und das Captive-Portal. Alle Befehle
+laufen über einen einzigen Handler, der sie an `apiDispatch()` weitergibt.
 
 Alles, was von außen kommt, läuft durch `sanitize()`:
 
@@ -314,6 +341,7 @@ Alles liegt im NVS unter dem Namensraum `kilter`:
 | `best`, `gtotal` | Bestzeit und zuletzt gewählte Rundenlänge |
 | `top` | Bestenliste, fünf Einträge als Block |
 | `thr`, `sens`, `delta` | Einstellungen des Touch-Sensors |
+| `captive` | ob sich die Seite beim Verbinden von selbst öffnet |
 
 Geschrieben wird **verzögert**: `settingsSave()` setzt nur einen Merker,
 und erst wenn drei Sekunden lang nichts mehr passiert ist, landen die

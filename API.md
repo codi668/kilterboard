@@ -4,6 +4,11 @@ Mit dieser Schnittstelle lässt sich die Wand aus eigenen Programmen
 steuern: abfragen, welche Griffe leuchten und in welcher Farbe, Griffe
 ein- und ausschalten und die Sensoren auslesen.
 
+Es gibt sie zweimal: **über WLAN** als HTTP-Aufrufe und **über das
+USB-Kabel** als Textzeilen. Beide Wege führen im Gerät durch dieselbe
+Funktion, es gibt also keine Unterschiede im Verhalten. Die serielle
+Fassung steht weiter unten unter [Über USB](#über-usb).
+
 Alles läuft über einfache HTTP-Aufrufe ohne besondere Kopfzeilen. Jeder
 Browser, `curl`, Python, Node oder ein ESP32 kommt damit zurecht.
 `Access-Control-Allow-Origin: *` ist gesetzt, eine Webseite von einem
@@ -255,6 +260,123 @@ while punkte < 10:
 print(f"10 Griffe in {time.time() - start:.1f} s")
 ```
 
+## Über USB
+
+Dieselben Befehle gehen über das USB-Kabel, mit **115200 Baud**. Eine
+Zeile hinein, eine Zeile JSON zurück. Das ist der Weg, wenn kein WLAN im
+Spiel sein soll oder ein Rechner fest an der Wand hängt.
+
+```
+leds                        was leuchtet gerade, mit Sensorzustand
+sensors                     alle acht Kanäle einzeln
+status                      alles auf einmal
+set grip <1-6> <RRGGBB|off>
+set cell <0-33> <RRGGBB|off>
+set all <RRGGBB|off>
+set cells <204 Hex-Zeichen>
+off                         alle LEDs aus
+mode <1-6>                  1 Regenbogen 2 Griffe 3 Spiel
+                            4 Aus 5 Testbild 6 Fernsteuerung
+bright <5-255>              Helligkeit
+calib                       Sensor neu einmessen
+log on|off                  Meldungen wie "[touch] Griff 1 beruehrt"
+events on|off               Berührungen von selbst melden (ab Werk an)
+help                        diese Liste
+```
+
+Wer lieber kopiert statt tippt, nimmt dieselbe Schreibweise wie bei HTTP —
+auch das versteht die serielle Schnittstelle:
+
+```
+/api/leds/set?grip=3&color=00FF00
+```
+
+Zum Ausprobieren reicht ein Terminalprogramm:
+
+```bash
+pio device monitor          # oder: screen /dev/ttyACM0 115200
+```
+
+### Berührungen werden von selbst gemeldet
+
+Sobald jemand einen Griff anfasst, schickt die Wand von sich aus eine
+Zeile — ohne dass etwas abgefragt werden muss:
+
+```json
+{"event":"touch","n":5,"ms":11318}
+{"event":"release","n":5,"ms":11338}
+{"event":"button","n":1,"ms":15002}
+```
+
+| Feld | Bedeutung |
+|---|---|
+| `event` | `touch` (angefasst), `release` (losgelassen), `button` (Taster T1/T2) |
+| `n` | Griff 1…6 bzw. Taster 1…2 |
+| `ms` | Laufzeit des Geräts in Millisekunden, als Zeitstempel |
+
+Damit braucht ein Programm über USB **gar nicht zu pollen**. Abschalten
+lässt sich das mit `events off`, zum Beispiel wenn die Ausgabe sonst
+stört.
+
+Die Griffe ändern bei Berührung von sich aus **nichts** an der
+Beleuchtung — was leuchtet, bestimmt allein die Betriebsart oder ein
+Befehl über die Schnittstelle. Ausnahmen sind die Betriebsarten, in denen
+genau das die Aufgabe ist: `Griffe` (Farbe weiterschalten) und `Spiel`.
+
+### Antworten von Meldungen unterscheiden
+
+Über dieselbe Leitung kommen drei Arten von Zeilen:
+
+| Anfang | Was es ist |
+|---|---|
+| `{"ok":` … | Antwort auf einen Befehl |
+| `{"event":` … | Berührung, von selbst gemeldet |
+| `#` oder `[` … | Hinweise und Meldungen für Menschen |
+
+Ein Programm filtert also auf `{` und schaut auf `event`. Wer ganz
+saubere Ausgabe will, schickt einmal `log off`.
+
+### Beispiel: Berührungen auswerten (Python)
+
+```python
+import serial, json
+
+s = serial.Serial("/dev/ttyACM0", 115200, timeout=1)
+
+def befehl(text):
+    s.write((text + "\n").encode())
+
+befehl("log off")           # nur noch JSON lesen
+befehl("off")
+
+while True:
+    zeile = s.readline().decode(errors="replace").strip()
+    if not zeile.startswith("{"):
+        continue
+    d = json.loads(zeile)
+    if d.get("event") == "touch":
+        print("Griff", d["n"], "berührt")
+        befehl(f"set grip {d['n']} FF00FF")
+    elif d.get("event") == "release":
+        befehl(f"set grip {d['n']} off")
+```
+
+### Worauf man achten muss
+
+- **Nach dem Einschalten dauert es rund elf Sekunden**, bis die
+  Schnittstelle antwortet: Der WLAN-Versuch läuft mit bis zu acht
+  Sekunden Wartezeit, dazu kommt der Countdown. Vorher gesendete Befehle
+  landen im Puffer und werden danach abgearbeitet.
+- **Den Eingangspuffer nach dem Öffnen nicht leeren**, während das Gerät
+  noch hochfährt — sonst verschluckt man die Begrüßung und wartet
+  anschließend auf Antworten, die schon durch waren.
+- **DTR nicht setzen.** Beim ESP32-C3 hängen DTR und RTS an Reset und
+  Boot-Pin; ein gesetztes DTR kann das Gerät in den Programmiermodus
+  schicken. `pyserial` mit den Vorgabewerten öffnen und nichts daran
+  ändern.
+- Eine Zeile darf höchstens **320 Zeichen** lang sein; das reicht für
+  `set cells` mit 204 Hex-Zeichen.
+
 ## Grenzen
 
 - Der Webserver bearbeitet **eine Anfrage nach der anderen**. Mehrere
@@ -264,8 +386,9 @@ print(f"10 Griffe in {time.time() - start:.1f} s")
 - Es gibt **keine Anmeldung**. Wer im selben WLAN ist, darf schalten. Das
   ist für ein Gerät gedacht, das sein eigenes WLAN aufspannt. Geschützt
   sind nur `/update` und `/api/reboot`.
-- Die Wand **meldet sich nicht von selbst**, wenn jemand einen Griff
-  anfasst — es gibt keine WebSockets und keine Rückrufe. Dafür ist der
-  Zähler `touches` da: abfragen, vergleichen, fertig.
+- **Über WLAN** meldet sich die Wand nicht von selbst, wenn jemand einen
+  Griff anfasst — es gibt keine WebSockets und keine Rückrufe. Dafür ist
+  der Zähler `touches` da: abfragen, vergleichen, fertig. **Über USB**
+  geht es ohne Abfragen, dort kommen die Berührungen von selbst.
 - Gesetzte Farben stehen **nur im Arbeitsspeicher**. Nach einem Neustart
   ist die Wand wieder im Regenbogen.

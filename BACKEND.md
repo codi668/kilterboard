@@ -210,39 +210,56 @@ document.querySelectorAll('[data-mode]').forEach(b =>
 `go()` ist ein `fetch()`, also ein ganz normaler HTTP-Aufruf. Beim Knopf
 „Regenbogen“ wird daraus `GET /api/mode?m=1`.
 
-**Schritt 2 — der Server nimmt sie an.** In `webBegin()` ist für jede
-Adresse eine Funktion hinterlegt:
+**Schritt 2 — der Server nimmt sie an.** Es gibt *einen* Handler für alle
+Befehle. Er reicht Pfad und Parameter weiter und schickt zurück, was
+dabei herauskommt:
 
 ```cpp
-server.on("/api/mode", HTTP_GET, [] {
-  int m = argInt("m", 1);
-  if (m >= MODE_RAINBOW && m <= MODE_API) boardSetMode((Mode)m);
-  sendOk();
-});
+static void handleApi() {
+  HttpArgs args;
+  int code = 200;
+  String antwort = apiDispatch(server.uri(), args, code);
+  ...
+  server.send(code, "application/json", antwort);
+}
+
+for (const char *p : pfade) server.on(p, HTTP_GET, handleApi);
 ```
 
-Das `[] { ... }` ist eine Lambda-Funktion — eine Funktion ohne Namen, die
-direkt an Ort und Stelle steht. Sie wird nicht sofort ausgeführt, sondern
-gespeichert und später aufgerufen, wenn eine passende Anfrage kommt. Man
-könnte genauso gut normale Funktionen schreiben und deren Namen übergeben;
-die Lambdas halten nur alles beieinander.
-
-Wichtig ist die Prüfung: `argInt("m", 1)` holt die Zahl aus der Adresse,
-und die `if`-Zeile lässt nur gültige Betriebsarten durch. Alles, was von
-außen kommt, wird geprüft, bevor es irgendwo landet.
-
-**Schritt 3 — der Zustand ändert sich.** `boardSetMode()` schreibt nach
-`st.mode` und räumt auf:
+**Schritt 3 — `apiDispatch()` verarbeitet den Befehl.** Diese Funktion in
+`api.cpp` ist die eigentliche Schnittstelle. Sie prüft die Werte und
+ändert den Zustand:
 
 ```cpp
-void boardSetMode(Mode m) {
-  st.mode = m;
-  fillAll(0);
-  for (int g = 0; g < NUM_GRIPS; g++) flashUntil[g] = 0;
-  ...
-  render();
+if (pfad == "/api/mode") {
+  int m = a.getInt("m", -1);
+  if (m < MODE_RAINBOW || m > MODE_API)
+    return fehler("m muss 1 bis " + String((int)MODE_API) + " sein", code);
+  boardSetMode((Mode)m);
+  return ok("\"mode\":" + String((int)st.mode));
 }
 ```
+
+Warum der Umweg über eine eigene Funktion, statt den Code direkt in den
+Webserver zu schreiben? Weil es die Befehle zweimal gibt — über WLAN und
+über das USB-Kabel. Stünde die Logik im Webserver, müsste man sie für die
+serielle Fassung ein zweites Mal schreiben, und spätestens bei der
+nächsten Änderung laufen die beiden auseinander.
+
+Deshalb holt sich `apiDispatch()` seine Parameter nicht direkt vom
+Webserver, sondern über eine kleine Zwischenschicht:
+
+```cpp
+struct ApiArgs {
+  virtual bool   has(const char *name) const = 0;
+  virtual String get(const char *name) const = 0;
+};
+```
+
+Davon gibt es zwei Ausführungen: `HttpArgs` in `web.cpp` fragt den
+Webserver, `LineArgs` in `serial.cpp` schaut in die Paare, die aus einer
+Befehlszeile gelesen wurden. `apiDispatch()` merkt den Unterschied nicht.
+Eine neue Funktion steht damit automatisch über beide Wege zur Verfügung.
 
 **Schritt 4 — das nächste Bild sieht anders aus.** Beim nächsten
 Durchlauf von `boardTick()` greift der `switch` auf `st.mode` und ruft
@@ -282,9 +299,16 @@ Entprellzeit dazu.
 void boardOnGripTouched(uint8_t grip) {
   if (st.mode == MODE_TOUCH) { boardCycleGrip(grip); return; }   // Farbe weiter
   if (st.mode == MODE_GAME)  { ... Treffer oder Fehlgriff ... }
-  flashGrip(grip, 0xFFFFFF, 120);   // sonst nur kurz aufblitzen
+  // sonst passiert an den LEDs nichts
 }
 ```
+
+In allen übrigen Betriebsarten ändert eine Berührung die Beleuchtung
+**nicht**. Das war anfangs anders — der Griff blitzte kurz weiß auf, als
+Rückmeldung, dass der Sensor arbeitet. Bei Fernsteuerung über die
+Schnittstelle macht das die Wand aber unvorhersehbar: Ein Programm setzt
+eine Farbe, und ein Fingertipp überschreibt sie. Jetzt gilt, dass
+ausschließlich die Betriebsart oder ein Befehl bestimmt, was leuchtet.
 
 **Schritt 3 — das Handy fragt nach.** Die Seite ruft viermal pro Sekunde
 `/api/status` ab. Der Server baut daraus eine JSON-Antwort mit allem, was
@@ -426,6 +450,42 @@ static void sanitize(const String &in, char *out, size_t len) {
 Die Bedingung `n < len - 1` ist dabei genauso wichtig wie das Aussortieren
 der Zeichen: Sie sorgt dafür, dass ein langer Name nicht über das Ende des
 Zielpuffers hinausschreibt.
+
+## 7b. Dieselbe Schnittstelle über USB
+
+`serial.cpp` ist klein, weil die Arbeit schon getan ist: Zeile einlesen,
+in Pfad und Parameter zerlegen, `apiDispatch()` aufrufen, Antwort
+ausgeben. Zwei Schreibweisen versteht sie —
+
+```
+set grip 3 00FF00
+/api/leds/set?grip=3&color=00FF00
+```
+
+— die zweite, damit man Aufrufe aus der WLAN-Fassung direkt kopieren
+kann.
+
+Eines kann die serielle Seite, was über WLAN nicht geht: **von selbst
+melden**, wenn jemand einen Griff anfasst.
+
+```cpp
+void serialEvent(const char *art, int nummer) {
+  if (!eventsEnabled) return;
+  Serial.printf("{\"event\":\"%s\",\"n\":%d,\"ms\":%lu}\n",
+                art, nummer, (unsigned long)millis());
+}
+```
+
+Aufgerufen wird das im Touch-Treiber an derselben Stelle, an der auch
+`boardOnGripTouched()` ausgelöst wird. Ein angeschlossener Rechner muss
+also nicht abfragen, sondern liest einfach mit. Über HTTP ginge das nur
+mit WebSockets oder langen Abfragen; dort gibt es stattdessen den Zähler
+`touches`.
+
+Damit ein Programm Antworten von Meldungen unterscheiden kann, beginnen
+Antworten mit `{"ok":`, Ereignisse mit `{"event":`, und alles für
+Menschen mit `#` oder `[`. Wer ganz saubere Ausgabe braucht, schickt
+`log off`.
 
 ## 8. Das Spiel
 
