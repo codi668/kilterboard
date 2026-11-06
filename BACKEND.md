@@ -579,7 +579,7 @@ Form `0xRRGGBB`.
 **Eine eigene Betriebsart bauen.** Vier Schritte:
 
 1. In `config.h` bei `enum Mode` eine Nummer ergänzen, z. B.
-   `MODE_LAUFLICHT = 6`.
+   `MODE_LAUFLICHT = 7`.
 2. In `board.cpp` eine Funktion schreiben, die `cellColor[]` füllt:
    ```cpp
    static void tickLauflicht() {
@@ -591,13 +591,21 @@ Form `0xRRGGBB`.
 3. Im `switch` in `boardTick()` eintragen:
    `case MODE_LAUFLICHT: tickLauflicht(); break;`
 4. In `web_page.h` bei den Modusknöpfen eine Zeile ergänzen:
-   `<button data-mode="6">Lauflicht</button>`
+   `<button data-mode="7">Lauflicht</button>`
 
 Mehr braucht es nicht — den Rest erledigt `/api/mode` von allein.
 
 **Das Spiel schwerer machen.** In `tickGame()` im Zustand `GAME_RUNNING`
 steht die Notbremse nach 120 Sekunden. Bau daraus ein Zeitlimit pro Griff:
 Wer nicht innerhalb von zwei Sekunden trifft, verliert.
+
+**Die Schnittstelle für eigene Programme** ist ein eigenes Thema und in
+[API.md](API.md) beschrieben: Dort steht, wie man von außen abfragt, was
+leuchtet, Griffe schaltet und die Sensoren ausliest. Im Code sind das die
+Endpunkte `/api/leds`, `/api/leds/set` und `/api/sensors` in `web.cpp`
+sowie die Betriebsart `MODE_API`, in der `boardTick()` absichtlich nichts
+zeichnet — sonst würde die Animation jede von außen gesetzte Farbe im
+nächsten Bild überschreiben.
 
 **Beim Suchen hilft:** Jede Datei hat oben einen Kommentar, was sie macht.
 Die Übersicht über alle Dateien und den Datenfluss steht in

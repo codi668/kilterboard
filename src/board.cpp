@@ -160,9 +160,43 @@ void boardSetBrightness(uint8_t b) {
   render();
 }
 
+// ---- Fernsteuerung ueber die Schnittstelle ----
+// Gesetzte Farben bleiben stehen, bis sie ueberschrieben werden oder eine
+// andere Betriebsart uebernimmt.
+void boardApiSetCell(uint8_t cell, uint32_t color) {
+  if (cell >= NUM_CELLS) return;
+  if (st.mode != MODE_API) { st.mode = MODE_API; }
+  cellColor[cell] = color & 0xFFFFFF;
+}
+
+void boardApiSetGrip(uint8_t grip, uint32_t color) {
+  if (grip >= NUM_GRIPS) return;
+  if (st.mode != MODE_API) { st.mode = MODE_API; }
+  cellColor[gripCells[grip][0]] = color & 0xFFFFFF;
+  cellColor[gripCells[grip][1]] = color & 0xFFFFFF;
+}
+
+void boardApiSetAll(uint32_t color) {
+  if (st.mode != MODE_API) { st.mode = MODE_API; }
+  for (int i = 0; i < NUM_CELLS; i++) cellColor[i] = color & 0xFFFFFF;
+}
+
+// Gehoert diese Position zu einem Griff mit Touch-Sensor?
+bool boardIsGripCell(uint8_t cell) {
+  for (int g = 0; g < NUM_GRIPS; g++)
+    for (int k = 0; k < 2; k++)
+      if (gripCells[g][k] == cell) return true;
+  return false;
+}
+
+uint8_t boardCellOfGrip(uint8_t grip, uint8_t nr) {
+  return (grip < NUM_GRIPS && nr < 2) ? gripCells[grip][nr] : 0;
+}
+
 void boardSetMode(Mode m) {
+  bool warSchonApi = (st.mode == MODE_API && m == MODE_API);
   st.mode = m;
-  fillAll(0);
+  if (!warSchonApi) fillAll(0);
   for (int g = 0; g < NUM_GRIPS; g++) flashUntil[g] = 0;
   if (m == MODE_TOUCH)
     for (int g = 0; g < NUM_GRIPS; g++) st.gripState[g] = 0;
@@ -353,6 +387,7 @@ void boardTick() {
     case MODE_GAME:    tickGame();    break;
     case MODE_OFF:     fillAll(0);    break;
     case MODE_TEST:    tickTest();    break;
+    case MODE_API:     /* nichts zeichnen -- es gilt, was gesetzt wurde */ break;
   }
   render();
 }

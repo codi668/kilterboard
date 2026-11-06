@@ -19,6 +19,8 @@ Zwei Texte zum Code:
   wie und warum das Ganze funktioniert, und selbst daran weiterbauen.
 - **[DOKUMENTATION.md](DOKUMENTATION.md)** — die knappe Referenz zum
   Nachschlagen: Module, Datenfluss, Speicherbelegung, Schnittstelle.
+- **[API.md](API.md)** — die Schnittstelle über WLAN für eigene Programme:
+  abfragen was leuchtet, Griffe schalten, Sensoren auslesen.
 
 ## Hardware
 
@@ -44,6 +46,7 @@ die beiden oberen Reihen, paarweise.
 | 3 | Spiel | Reaktionsspiel „Griff-Jagd“ |
 | 4 | Aus | alles dunkel |
 | 5 | Testbild | Reihe 1 rot, 2 grün, 3 blau, 4 gelb, 5 weiß — zum Einstellen der Farbreihenfolge |
+| 6 | Fernsteuerung | keine Animation; es leuchtet, was über die [Schnittstelle](API.md) gesetzt wird |
 
 **Griff-Jagd:** Ein Griff leuchtet türkis, wer ihn berührt, bekommt den
 nächsten. Gemessen werden Gesamtzeit und Reaktionszeit pro Griff; die
@@ -177,6 +180,15 @@ Alles über GET, Antwort `ok`; Status als JSON unter `/api/status`.
 ```
 /api/mode?m=1..5              Betriebsart
 /api/ledorder?o=0..5          Farbreihenfolge (RGB, RBG, GRB, GBR, BRG, BGR)
+
+Fernsteuerung aus eigenen Programmen -- ausführlich in API.md:
+/api/leds                     was leuchtet gerade, inkl. Sensorzustand
+/api/leds/set?grip=1..6&color=RRGGBB    einen Griff schalten
+/api/leds/set?cell=0..33&color=RRGGBB   eine Position schalten
+/api/leds/set?all=RRGGBB                alle
+/api/leds/set?cells=<204 Hex-Zeichen>   ganzes Bild in einem Aufruf
+/api/leds/off                 alles aus
+/api/sensors                  alle acht Kanäle einzeln
 /api/bright?v=5..255          Helligkeit
 /api/speed?v=0..100           Animationstempo
 /api/grip?i=0..5[&c=0..3]     Griff weiterschalten oder Farbe setzen

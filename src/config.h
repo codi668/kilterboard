@@ -29,7 +29,8 @@ enum Mode : uint8_t {
   MODE_TOUCH   = 2,   // Griffe per Beruehrung durchschalten
   MODE_GAME    = 3,   // Reaktionsspiel "Griff-Jagd"
   MODE_OFF     = 4,   // Alles dunkel
-  MODE_TEST    = 5    // Testbild zum Einstellen der Farbreihenfolge
+  MODE_TEST    = 5,   // Testbild zum Einstellen der Farbreihenfolge
+  MODE_API     = 6    // Fernsteuerung: keine Animation, nur was die API setzt
 };
 
 // Reihenfolge der Farbkanaele im LED-Streifen. Welche stimmt, haengt vom
@@ -80,6 +81,13 @@ void boardSetBrightness(uint8_t b);
 void boardSetLedOrder(uint8_t o);
 void boardCycleGrip(uint8_t grip);      // Farbe eines Griffs weiterschalten
 void boardSetGrip(uint8_t grip, uint8_t colorIdx);
+
+// Fernsteuerung: Farben direkt setzen (schaltet nach MODE_API)
+void boardApiSetCell(uint8_t cell, uint32_t color);
+void boardApiSetGrip(uint8_t grip, uint32_t color);
+void boardApiSetAll(uint32_t color);
+bool boardIsGripCell(uint8_t cell);
+uint8_t boardCellOfGrip(uint8_t grip, uint8_t nr);   // nr = 0 oder 1
 void boardStartGame(uint8_t targets);
 void boardStopGame();
 void boardOnGripTouched(uint8_t grip);  // vom Touch-Treiber gerufen
@@ -94,7 +102,9 @@ struct TouchInfo {
   uint8_t productId = 0;
   uint8_t status    = 0;          // Register 0x03
   int8_t  delta[8]  = {0};        // Register 0x10..0x17
-  bool    down[8]   = {false};    // entprellter Zustand
+  bool     down[8]   = {false};   // entprellter Zustand
+  uint16_t touches[8] = {0};      // Zaehler je Kanal, damit ein Programm
+                                  // keine Beruehrung verpasst
   uint8_t threshold = 20;         // Delta-Schwelle (nur im Delta-Modus)
   uint8_t sensitivity = 2;        // 0..7 -> DELTA_SENSE
   bool    useDelta  = false;      // false = Status-Register (Standard)

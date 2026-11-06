@@ -114,6 +114,15 @@ summary{cursor:pointer;color:var(--dim);font-size:.85rem;padding:8px 0}
 
 <!-- ------------------------------------------------ Steuern -->
 <section data-page="steuern">
+  <div class="card hide" id="remoteCard" style="border-color:var(--accent2)">
+    <h2>Ferngesteuert</h2>
+    <p class="note">Die Wand wird gerade von einem anderen Programm über die
+      Schnittstelle gesteuert. Animationen sind ausgesetzt, es leuchtet nur,
+      was dieses Programm setzt.</p>
+    <div class="row" style="margin-top:10px">
+      <button class="small" data-mode="1">Zurück zum Regenbogen</button>
+    </div>
+  </div>
   <div class="card">
     <h2>Betriebsart</h2>
     <div class="modes">
@@ -306,6 +315,7 @@ function paint(s){
   }
   document.querySelectorAll('[data-mode]').forEach(b=>
     b.classList.toggle('on', +b.dataset.mode===s.mode));
+  document.getElementById('remoteCard').classList.toggle('hide', s.mode!==6);
   setSlider('bright',s.bright,s.bright);
   setSlider('speed',s.speed,s.speed+' %');
   // Griff-Knöpfe

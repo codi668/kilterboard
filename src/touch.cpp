@@ -155,6 +155,7 @@ void touchTick() {
 
     if (raw && !tc.down[i] && now - lastEdge[i] > DEBOUNCE_MS) {
       tc.down[i]  = true;
+      tc.touches[i]++;      // Zaehler fuer Abfragen ueber die Schnittstelle
       lastEdge[i] = now;
 
       if (i == 0) {                       // T1 -> Regenbogen

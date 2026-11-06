@@ -120,6 +120,7 @@ LED-Mapping, Animationen und Spiellogik. Pro Betriebsart gibt es eine
 | `tickTouch()` | Farbe je Griff aus `st.gripState[]` |
 | `tickGame()` | Spielanzeige je nach Zustand |
 | `tickTest()` | Testbild für die Farbreihenfolge |
+| — | `MODE_API`: zeichnet absichtlich nichts, damit von außen gesetzte Farben stehen bleiben (siehe [API.md](API.md)) |
 
 `boardTick()` begrenzt die Bildrate (20 ms im Regenbogen, sonst 30 ms)
 und ruft die passende Funktion auf. `flashGrip()` legt eine kurze
