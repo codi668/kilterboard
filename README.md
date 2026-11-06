@@ -12,8 +12,13 @@ stammen der Aufbau, die Verdrahtung und das LED-Mapping. Diese Fassung ist
 der Ausbau für den Tag der offenen Tür: Weboberfläche, Reaktionsspiel und
 Updates über WLAN.
 
-Wie die Firmware innen aufgebaut ist, steht in
-[DOKUMENTATION.md](DOKUMENTATION.md).
+Zwei Texte zum Code:
+
+- **[BACKEND.md](BACKEND.md)** — die Firmware von Grund auf erklärt, mit
+  Vergleichen zum ursprünglichen Sketch. Für alle, die verstehen wollen,
+  wie und warum das Ganze funktioniert, und selbst daran weiterbauen.
+- **[DOKUMENTATION.md](DOKUMENTATION.md)** — die knappe Referenz zum
+  Nachschlagen: Module, Datenfluss, Speicherbelegung, Schnittstelle.
 
 ## Hardware
 
